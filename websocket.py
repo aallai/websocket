@@ -1,4 +1,5 @@
 from socket import *
+from struct import *
 import re
 import base64
 import hashlib
@@ -19,7 +20,7 @@ class WebSocket() :
 	WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
 	# states
-	INITIAL, LISTENING, CONNECTED, CLOSED = xrange(4)	
+	INITIAL, LISTENING, OPEN, CLOSED = xrange(4)	
 
 	# opcodes
 	CONT = 0x0 
@@ -67,22 +68,34 @@ class WebSocket() :
 			resource, hdr = ret
 			self._establish(conn, hdr)		
 			socket = copy.deepcopy(self)
-			socket._state = WebSocket.CONNECTED
+			socket._state = WebSocket.OPEN
 			return socket 
 
-	def send(frame, type=None) :
+	# TODO fragmenting?
+	def send(self, frame, type_=None) :
 		
 		'Send a frame to the remote end. Type must be WebSocket.TEXT or WebSocket.BIN, TEXT is default.'
 
-		self._assert_state(WebSocket.CONNECTED, 'Cannot send without establishing connection.')
+		self._assert_state(WebSocket.OPEN, 'Cannot send without establishing connection.')
 		
-		# start off with no fragmenting
-		if type is None or type == WebSocket.TEXT :
+		if type_ is None or type_ == WebSocket.TEXT :
+			type_ = WebSocket.TEXT
 			frame = frame.encode('utf-8')
+
+		if type_ not in (WebSocket.TEXT, WebSocket.BIN) :
+			raise TypeError, 'Frame type must be text or binary.'			
 		
-		
-		
-	
+		# TODO handle sizes 
+		size = len(frame)
+		if size > 125 :
+			raise ValueError, 'You need to implement variable size field.'
+
+
+		fin_op = 1 << 7 | type_
+		hdr = pack('BB', fin_op, size)
+		self._socket.sendall(hdr + frame)			
+
+
 	def _parse_handshake(self, handshake) :
 
 		'Returns a resource name and dictionary of header fields if handshake is valid'
