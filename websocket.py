@@ -2,6 +2,7 @@ from socket import *
 import re
 import base64
 import hashlib
+import copy
 
 #
 # TODO tls support
@@ -16,12 +17,24 @@ class WebSocket() :
 
 	# constant used in handshake
 	WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
+
 	# states
 	INITIAL, LISTENING, CONNECTED, CLOSED = xrange(4)	
+
+	# opcodes
+	CONT = 0x0 
+	TEXT = 0x1
+	BIN = 0x2
+	# 0x3-7 reserved, non-control
+	CLOSE = 0x8
+	PING = 0x9
+	PONG = 0xa
+	# 0xb-f reserved, control	
 
 	def __init__(self) :
 		self._socket = socket()
 		self._state = WebSocket.INITIAL 
+		self._server = False
 
 	def _assert_state(self, state, message='') :
 		if self._state != state :
@@ -33,6 +46,7 @@ class WebSocket() :
 
 		self._socket.bind(('', port))
 		self._socket.listen(5)
+		self._server = True
 		self._state = WebSocket.LISTENING
 	 
 	def accept(self) :
@@ -52,11 +66,23 @@ class WebSocket() :
 			
 			resource, hdr = ret
 			self._establish(conn, hdr)		
-			self._state = WebSocket.CONNECTED			
+			socket = copy.deepcopy(self)
+			socket._state = WebSocket.CONNECTED
+			return socket 
 
-			# TODO return new websocket?
-			return 
+	def send(frame, type=None) :
+		
+		'Send a frame to the remote end. Type must be WebSocket.TEXT or WebSocket.BIN, TEXT is default.'
 
+		self._assert_state(WebSocket.CONNECTED, 'Cannot send without establishing connection.')
+		
+		# start off with no fragmenting
+		if type is None or type == WebSocket.TEXT :
+			frame = frame.encode('utf-8')
+		
+		
+		
+	
 	def _parse_handshake(self, handshake) :
 
 		'Returns a resource name and dictionary of header fields if handshake is valid'
