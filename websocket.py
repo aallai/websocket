@@ -1,11 +1,10 @@
 from socket import *
-import copy
-
-'''
-BSD-style interface to websockets
-'''
+import re
 
 class WebSocket() :
+	
+	'BSD-style interface to websockets'
+
 	def __init__(self) :
 		self.socket = socket()
 
@@ -15,4 +14,19 @@ class WebSocket() :
 	 
 	def accept(self) :
 		conn, addr = self.socket.accept()
-		print conn.recv(65536)			 
+		hdr = self.parse_handshake(conn.recv(65535))	
+		print hdr
+
+	def parse_handshake(self, handshake) :
+
+		'Returns a dictionary of header fields if handshake is valid'
+
+		req = handshake.split('\n')[0]
+		if not re.match(r'GET\s.+\sHTTP/1\.[1-9]', req) : 
+			return {}
+
+		hdr = dict(re.findall(r'([A-Za-z0-9]+):\s(.*)', handshake))
+		
+		
+			
+		
