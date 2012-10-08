@@ -64,11 +64,11 @@ class WebSocket() :
 
 			# length of base64 key must be 16 bytes
 			key = hdr['Sec-WebSocket-Key']
-			last_group = 3
+			last_group = 0
 			if key.endswith('=') :
-				last_group = 3 - len(re.search(r'[=]+', key).group())
+				last_group = 3 - len(key[key.find('='):])
 
-			if (len(key.strip('=')) - 1) * 6 / 8 + last_group != 16 :
+			if len(key.strip('=')) / 4 * 3 + last_group != 16 :
 				return None
 
 			if hdr['Sec-WebSocket-Version'] != '13' :
