@@ -7,27 +7,42 @@ import hashlib
 # TODO tls support
 #
 
+class WebSocketError(Exception) :
+	pass
+
 class WebSocket() :
 	
 	'BSD-style interface to websockets'
 
-	# constants
 	# constant used in handshake
 	WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
+	# states
+	INITIAL, LISTENING, CONNECTED, CLOSED = xrange(4)	
 
 	def __init__(self) :
-		self.socket = socket()
+		self._socket = socket()
+		self._state = WebSocket.INITIAL 
+
+	def _assert_state(self, state, message='') :
+		if self._state != state :
+			raise WebSocketError(m) 
 
 	def listen(self, port=80) :
-		self.socket.bind(('', port))
-		self.socket.listen(5)
+		
+		self._assert_state(WebSocket.INITIAL, 'Cannot listen while in state: ' + str(self._state))
+
+		self._socket.bind(('', port))
+		self._socket.listen(5)
+		self._state = WebSocket.LISTENING
 	 
 	def accept(self) :
 
 		'Loop until a connection is established'
 
+		self._assert_state(WebSocket.LISTENING, 'Cannot accept connections without calling listen()')
+
 		while (True) :
-			conn, addr = self.socket.accept()
+			conn, addr = self._socket.accept()
 			ret = self._parse_handshake(conn.recv(65535))	
 		
 			if ret is None :
@@ -37,7 +52,8 @@ class WebSocket() :
 			
 			resource, hdr = ret
 			self._establish(conn, hdr)		
-			
+			self._state = WebSocket.CONNECTED			
+
 			# TODO return new websocket?
 			return 
 
