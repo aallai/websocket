@@ -14,10 +14,9 @@ class WebSocket() :
 	 
 	def accept(self) :
 		conn, addr = self.socket.accept()
-		hdr = self.parse_handshake(conn.recv(65535))	
-		print hdr
+		hdr = self._parse_handshake(conn.recv(65535))	
 
-	def parse_handshake(self, handshake) :
+	def _parse_handshake(self, handshake) :
 
 		'Returns a dictionary of header fields if handshake is valid'
 
@@ -25,8 +24,26 @@ class WebSocket() :
 		if not re.match(r'GET\s.+\sHTTP/1\.[1-9]', req) : 
 			return {}
 
-		hdr = dict(re.findall(r'([A-Za-z0-9]+):\s(.*)', handshake))
-		
+		# check header for required values as per rfc
+		# using a liberal grammar here
+		hdr = dict(re.findall(r'([^:\s]+):\s([^\r\n]*)', handshake))
+		try :
+			hdr['Host']
+
+			if hdr['Upgrade'].lower() != 'websocket' :
+				return {}
+
+			if hdr['Connection'].lower() != 'upgrade' :
+				return {}
+
+			hdr['Sec-WebSocket-Key']
+
+			if hdr['Sec-WebSocket-Version'] != '13' :
+				return {}
+			
+		except KeyError, e :
+			return {}		
+		return hdr
 		
 			
 		
