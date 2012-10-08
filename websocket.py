@@ -30,7 +30,7 @@ class WebSocket() :
 				continue
 			
 			resource, hdr = ret
-			
+			print hdr			
 
 	def _parse_handshake(self, handshake) :
 
@@ -53,7 +53,14 @@ class WebSocket() :
 			if hdr['Connection'].lower() != 'upgrade' :
 				return None
 
-			hdr['Sec-WebSocket-Key']
+			# length of key must be 16 bytes
+			key = hdr['Sec-WebSocket-Key']
+			last_group = 3
+			if key.endswith('=') :
+				last_group = 3 - len(re.search(r'[=]+', key).group())
+
+			if (len(key.strip('=')) - 1) * 6 / 8 + last_group != 16 :
+				return None
 
 			if hdr['Sec-WebSocket-Version'] != '13' :
 				return None
@@ -63,12 +70,13 @@ class WebSocket() :
 
 		return (m.group(1), hdr)
 
+
 	def _bad_handshake(self, socket) :
 			
 		'Send 400 Bad Request in response to bogus handshake'
 
 		try :
-			sock.sendall('HTTP/1.1 400 Bad Request\r\n\r\n')			
+			socket.sendall('HTTP/1.1 400 Bad Request\r\n\r\n')			
 		except error :
 			pass
 			
