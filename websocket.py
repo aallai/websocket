@@ -1,5 +1,7 @@
 from socket import *
 import re
+import base64
+import hashlib
 
 #
 # TODO tls support
@@ -8,6 +10,10 @@ import re
 class WebSocket() :
 	
 	'BSD-style interface to websockets'
+
+	# constants
+	# constant used in handshake
+	WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
 	def __init__(self) :
 		self.socket = socket()
@@ -30,7 +36,10 @@ class WebSocket() :
 				continue
 			
 			resource, hdr = ret
-			print hdr			
+			self._establish(conn, hdr)		
+			
+			# TODO return new websocket?
+			return 
 
 	def _parse_handshake(self, handshake) :
 
@@ -53,7 +62,7 @@ class WebSocket() :
 			if hdr['Connection'].lower() != 'upgrade' :
 				return None
 
-			# length of key must be 16 bytes
+			# length of base64 key must be 16 bytes
 			key = hdr['Sec-WebSocket-Key']
 			last_group = 3
 			if key.endswith('=') :
@@ -70,6 +79,20 @@ class WebSocket() :
 
 		return (m.group(1), hdr)
 
+	def _establish(self, socket, hdr) :
+
+		'Respond to a handshake'
+
+		accept = base64.b64encode(hashlib.sha1(hdr['Sec-WebSocket-Key'] + WebSocket.WS_GUID).digest())
+		
+		response = [
+			'HTTP/1.1 101 Switching Protocols',
+			'Upgrade: websocket',
+			'Connection: Upgrade',
+			'Sec-WebSocket-Accept: ' + accept,		
+		]		
+		
+		socket.sendall('\r\n'.join(response) + '\r\n' * 2)
 
 	def _bad_handshake(self, socket) :
 			
