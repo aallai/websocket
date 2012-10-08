@@ -69,6 +69,7 @@ class WebSocket() :
 			self._establish(conn, hdr)		
 			socket = copy.deepcopy(self)
 			socket._state = WebSocket.OPEN
+			socket._socket = conn
 			return socket 
 
 	# TODO fragmenting?
