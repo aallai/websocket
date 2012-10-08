@@ -1,6 +1,10 @@
 from socket import *
 import re
 
+#
+# TODO tls support
+#
+
 class WebSocket() :
 	
 	'BSD-style interface to websockets'
@@ -13,16 +17,29 @@ class WebSocket() :
 		self.socket.listen(5)
 	 
 	def accept(self) :
-		conn, addr = self.socket.accept()
-		hdr = self._parse_handshake(conn.recv(65535))	
+
+		'Loop until a connection is established'
+
+		while (True) :
+			conn, addr = self.socket.accept()
+			ret = self._parse_handshake(conn.recv(65535))	
+		
+			if ret is None :
+				self._bad_handshake(conn)
+				conn.close()
+				continue
+			
+			resource, hdr = ret
+			
 
 	def _parse_handshake(self, handshake) :
 
-		'Returns a dictionary of header fields if handshake is valid'
+		'Returns a resource name and dictionary of header fields if handshake is valid'
 
 		req = handshake.split('\n')[0]
-		if not re.match(r'GET\s.+\sHTTP/1\.[1-9]', req) : 
-			return {}
+		m = re.match(r'GET\s.*(/.*)\sHTTP/1\.[1-9]', req)
+		if not m : 
+			return None
 
 		# check header for required values as per rfc
 		# using a liberal grammar here
@@ -31,19 +48,28 @@ class WebSocket() :
 			hdr['Host']
 
 			if hdr['Upgrade'].lower() != 'websocket' :
-				return {}
+				return None
 
 			if hdr['Connection'].lower() != 'upgrade' :
-				return {}
+				return None
 
 			hdr['Sec-WebSocket-Key']
 
 			if hdr['Sec-WebSocket-Version'] != '13' :
-				return {}
+				return None
 			
 		except KeyError, e :
-			return {}		
-		return hdr
-		
+			return None		
+
+		return (m.group(1), hdr)
+
+	def _bad_handshake(self, socket) :
+			
+		'Send 400 Bad Request in response to bogus handshake'
+
+		try :
+			sock.sendall('HTTP/1.1 400 Bad Request\r\n\r\n')			
+		except error :
+			pass
 			
 		
