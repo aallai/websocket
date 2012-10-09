@@ -86,14 +86,19 @@ class WebSocket() :
 		if type_ not in (WebSocket.TEXT, WebSocket.BIN) :
 			raise TypeError, 'Frame type must be text or binary.'			
 		
-		# TODO handle sizes 
+
+		hdr = ''
 		size = len(frame)
-		if size > 125 :
-			raise ValueError, 'You need to implement variable size field.'
-
-
 		fin_op = 1 << 7 | type_
-		hdr = pack('BB', fin_op, size)
+
+		if size > 125 :
+			if size > 65535 :
+				hdr = pack('>BBQ', fin_op, 127, size)	
+			else :
+				hdr = pack('>BBH', fin_op, 126, size)	
+		else :
+			hdr = pack('BB', fin_op, size)
+
 		self._socket.sendall(hdr + frame)			
 
 
