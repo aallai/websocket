@@ -19,6 +19,9 @@ class WebSocket() :
 	# constant used in handshake
 	WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
+	# bufsize argument for recv, see python doc
+	RECV_SIZE = 4096
+
 	# states
 	INITIAL, LISTENING, OPEN, CLOSED = xrange(4)	
 
@@ -58,7 +61,7 @@ class WebSocket() :
 
 		while (True) :
 			conn, addr = self._socket.accept()
-			ret = self._parse_handshake(conn.recv(65535))	
+			ret = self._parse_handshake(conn.recv(WebSocket.RECV_SIZE))	
 		
 			if ret is None :
 				self._bad_handshake(conn)
@@ -85,7 +88,8 @@ class WebSocket() :
 
 		if type_ not in (WebSocket.TEXT, WebSocket.BIN) :
 			raise TypeError, 'Frame type must be text or binary.'			
-		
+
+		# TODO implement client send with masking
 
 		hdr = ''
 		size = len(frame)
@@ -101,6 +105,60 @@ class WebSocket() :
 
 		self._socket.sendall(hdr + frame)			
 
+
+	# XXX too much array slicing down there? use memoryview?
+	def recv(self) :
+		
+		'Receive a frame from the remote end. returns (frame, type)'
+
+		self._assert_state(WebSocket.OPEN, 'Cannot receive without establishing connection.')
+
+		data = ''
+		type_ = None
+		fin = 0
+
+		# loop until complete frame has been received
+		while not fin :
+			buf = ''
+			while len(buf) < 2
+				buf += self._socket.recv(WebSocket.RECV_SIZE)
+
+			fin_op, mask_size = unpack('BB', buf[:2])
+			buf = buf[2:]
+			masked = mask_size & 1 << 7
+			fin = fin_op & 1 << 7
+			op = fin_op & 0xf
+		
+			# TODO handle op, for now assume data frame
+			# TODO set type
+
+			if self.server and not masked :
+				# TODO unmasked frame from client, close connection
+			if not self.server and masked :
+				# TODO client and masked frame, close
+			
+			size = 0xff >> 1 & mask_size 	
+
+			if size == 126 :
+				while len(buf) < 2 :
+					buf += self._socket.recv(WebSocket.RECV_SIZE)
+				size = unpack('>H', buf[:2])
+				buf = buf[2:]
+
+			else if size == 127 :
+				while len(buf) < 8 :
+					buf += self._socket.recv(WebSocket.RECV_SIZE)
+				size = unpack('>Q', buf[:8])
+				buf = buf[8:]	
+
+			key = ''
+			if masked :
+				while len(buf) < 4 :
+					buf += self._socket.recv(WebSocket.RECV_SIZE)
+				key = unpack('>I', buf[:4])
+				buf = buf[4:] 		
+			
+			
 
 	def _parse_handshake(self, handshake) :
 
