@@ -119,7 +119,7 @@ class WebSocket() :
 
 		# loop until complete frame has been received
 		while not fin :
-			buf = ''
+			buf = bytearray('')
 			while len(buf) < 2
 				buf += self._socket.recv(WebSocket.RECV_SIZE)
 
@@ -158,7 +158,20 @@ class WebSocket() :
 				key = unpack('>I', buf[:4])
 				buf = buf[4:] 		
 			
-			
+			while len(buf) < size :
+				buf += self._socket.recv(WebSocket.RECV_SIZE)
+		
+			if self.server :
+				self._mask(key, buf)
+
+			data += buf	
+
+				
+	def _mask(key, data) :
+		buf = memoryview(data)
+
+		for i in xrange(len(buf))		
+			buf[i] = buf[i] ^ (key >> (i % 4) & 0xff)		 		
 
 	def _parse_handshake(self, handshake) :
 
