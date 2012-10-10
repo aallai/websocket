@@ -106,7 +106,7 @@ class WebSocket() :
 		self._socket.sendall(hdr + frame)			
 
 
-	# XXX too much array slicing down there? use memoryview?
+	# XXX too much array slicing?
 	def recv(self) :
 		
 		'Receive a frame from the remote end. returns (frame, type)'
@@ -129,15 +129,16 @@ class WebSocket() :
 			fin = fin_op & 1 << 7
 			op = fin_op & 0xf
 		
-			# TODO handle op, for now assume data frame
-			# TODO set type
+			if op in WebSocket.BIN, WebSocket.TEXT :
+				type_ = op		
 
 			if self.server and not masked :
 				# TODO unmasked frame from client, close connection
 			if not self.server and masked :
 				# TODO client and masked frame, close
 			
-			size = 0xff >> 1 & mask_size 	
+			# parse rest of header
+			size = self._frame_size(0xff >> 1 & mask_size, buf) 	
 
 			if size == 126 :
 				while len(buf) < 2 :
@@ -164,6 +165,10 @@ class WebSocket() :
 			if self.server :
 				self._mask(key, buf)
 
+			# handle op
+			if op == WebSocket.PING :
+				self.pong(buf)
+
 			data += buf	
 
 				
@@ -172,6 +177,9 @@ class WebSocket() :
 
 		for i in xrange(len(buf))		
 			buf[i] = buf[i] ^ (key >> (i % 4) & 0xff)		 		
+
+	def pong(self, data) :
+		pass
 
 	def _parse_handshake(self, handshake) :
 
