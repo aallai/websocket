@@ -120,7 +120,7 @@ class WebSocket() :
 		# loop until complete frame has been received
 		while not fin :
 			buf = bytearray('')
-			while len(buf) < 2
+			while len(buf) < 2 :
 				buf += self._socket.recv(WebSocket.RECV_SIZE)
 
 			fin_op, mask_size = unpack('BB', buf[:2])
@@ -129,24 +129,23 @@ class WebSocket() :
 			fin = fin_op & 1 << 7
 			op = fin_op & 0xf
 		
-			if op in WebSocket.BIN, WebSocket.TEXT :
+			if op in (WebSocket.BIN, WebSocket.TEXT) :
 				type_ = op		
 
 			if self.server and not masked :
+				pass
 				# TODO unmasked frame from client, close connection
 			if not self.server and masked :
+				pass
 				# TODO client and masked frame, close
 			
-			# parse rest of header
-			size = self._frame_size(0xff >> 1 & mask_size, buf) 	
-
 			if size == 126 :
 				while len(buf) < 2 :
 					buf += self._socket.recv(WebSocket.RECV_SIZE)
 				size = unpack('>H', buf[:2])
 				buf = buf[2:]
 
-			else if size == 127 :
+			elif size == 127 :
 				while len(buf) < 8 :
 					buf += self._socket.recv(WebSocket.RECV_SIZE)
 				size = unpack('>Q', buf[:8])
@@ -175,7 +174,7 @@ class WebSocket() :
 	def _mask(key, data) :
 		buf = memoryview(data)
 
-		for i in xrange(len(buf))		
+		for i in xrange(len(buf)) :		
 			buf[i] = buf[i] ^ (key >> (i % 4) & 0xff)		 		
 
 	def pong(self, data) :
