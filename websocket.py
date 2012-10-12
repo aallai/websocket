@@ -42,7 +42,7 @@ class WebSocket() :
 
 	def _assert_state(self, state, message='') :
 		if self._state != state :
-			raise WebSocketError(m) 
+			raise WebSocketError(message) 
 
 	def listen(self, port=80) :
 		
