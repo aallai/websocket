@@ -144,44 +144,42 @@ class WebSocket() :
 			if size == 126 :
 				while len(buf) < 2 :
 					buf += self._socket.recv(WebSocket.RECV_SIZE)
-				size = unpack('>H', buf[:2])
+				size = unpack('>H', buf[:2])[0]
 				buf = buf[2:]
 
 			elif size == 127 :
 				while len(buf) < 8 :
 					buf += self._socket.recv(WebSocket.RECV_SIZE)
-				size = unpack('>Q', buf[:8])
+				size = unpack('>Q', buf[:8])[0]
 				buf = buf[8:]	
 
-			key = ''
+			key = ()
 			if masked :
 				while len(buf) < 4 :
 					buf += self._socket.recv(WebSocket.RECV_SIZE)
-				key = unpack('>I', buf[:4])
+				key = unpack('BBBB', buf[:4])
 				buf = buf[4:] 		
 			
 			while len(buf) < size :
 				buf += self._socket.recv(WebSocket.RECV_SIZE)
-		
+
 			if self._server :
-				buf = self._mask(key, bytearray(buf))
+				buf = self._mask(key, buf)
 
-			# handle op
-			if op == WebSocket.PING :
-				self.pong(buf)
+			data += buf 	
 
-			data += buf	
-
-		return data, type_
+		return str(data), type_
 	
 				
 	def _mask(self, key, data) :
 
-		for i in xrange(len(data)) :		
-			data[i] = data[i] ^ (key & 0xff << (i % 4))		 		
+		data = bytearray(data)
+
+		for i in xrange(len(data)) :
+			data[i] = data[i] ^  key[i % 4]
 
 		return data
-		
+
 	def pong(self, data) :
 		pass
 
